@@ -1,29 +1,43 @@
 package main
 
 import (
-	"context"
+	"os"
+	"os/signal"
+	"syscall"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"a-cool-domain.io/k8s/dynamicwatcher"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 func main() {
 	println("Hello, kubernetes operator!")
 
+	sigs := make(chan os.Signal, 1)                                    // Create channel to receive os signals
+	stop := make(chan struct{})                                        // Create channel to receive stop signal
+	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT) // Register the sigs channel to receieve SIGTERM
+
 	println("Getting kubernetes config")
 	config := config.GetConfigOrDie()
-	k8sclient := kubernetes.NewForConfigOrDie(config)
 
-	namespaces, err := k8sclient.CoreV1().Namespaces().List(context.Background(), v1.ListOptions{})
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
 		panic(err)
 	}
 
-	println("namespaces")
-	for _, ns := range namespaces.Items {
-		println(ns.Name)
+	resources := []schema.GroupVersionResource{
+		{Group: "", Version: "v1", Resource: "namespaces"},
+		{Group: "", Version: "v1", Resource: "pods"},
 	}
+	go func() {
+		println("Starting dynamic watcher")
+		dynamicwatcher.Listen(dynamicClient, resources, stop)
+		sig := <-sigs
+		println("Received signal: ", sig)
+		stop <- struct{}{}
+	}()
 
+	<-stop
 	println("Stopping operator")
 }
