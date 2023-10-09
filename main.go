@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -11,12 +13,24 @@ import (
 func main() {
 	println("Hello, kubernetes operator!")
 
-	println("Getting kubernetes config")
-	config := config.GetConfigOrDie()
-	k8sclient := kubernetes.NewForConfigOrDie(config)
+	println("Getting kubernetes config, or die ...")
+	config, err := config.GetConfig()
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "error getting kubernetes config (is container running in a cluster?!)")
+		panic(err)
+	}
+
+	println("Puh, did not die. Kubernetes config apprihended.")
+
+	k8sclient, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "error getting kubernetes client")
+		panic(err)
+	}
 
 	namespaces, err := k8sclient.CoreV1().Namespaces().List(context.Background(), v1.ListOptions{})
 	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "error getting namespaces")
 		panic(err)
 	}
 
