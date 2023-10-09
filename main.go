@@ -18,11 +18,16 @@ func main() {
 	stop := make(chan struct{})                                        // Create channel to receive stop signal
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT) // Register the sigs channel to receieve SIGTERM
 
-	println("Getting kubernetes config")
-	config := config.GetConfigOrDie()
+    println("Getting kubernetes config, or die ...")
+	config, err := config.GetConfig()
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "error getting kubernetes config (is container running in a cluster?!)")
+		panic(err)
+	}	
 
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, "error getting namespaces")
 		panic(err)
 	}
 

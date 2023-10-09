@@ -1,0 +1,7 @@
+kind
+.vscode
+LICENSE
+README.md
+Dockerfile*
+.gitignore
+charts
