@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,12 +20,12 @@ func main() {
 	stop := make(chan struct{})                                        // Create channel to receive stop signal
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM, syscall.SIGINT) // Register the sigs channel to receieve SIGTERM
 
-    println("Getting kubernetes config, or die ...")
+	println("Getting kubernetes config, or die ...")
 	config, err := config.GetConfig()
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "error getting kubernetes config (is container running in a cluster?!)")
 		panic(err)
-	}	
+	}
 
 	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -38,6 +40,20 @@ func main() {
 	go func() {
 		println("Starting dynamic watcher")
 		dynamicwatcher.Listen(dynamicClient, resources, stop)
+		sig := <-sigs
+		println("Received signal: ", sig)
+		stop <- struct{}{}
+	}()
+
+	go func() {
+		http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			result := []byte(`{"status": "ok"}`)
+			_, _ = w.Write(result)
+		})
+
+		_ = http.ListenAndServe(":31337", nil)
 		sig := <-sigs
 		println("Received signal: ", sig)
 		stop <- struct{}{}
