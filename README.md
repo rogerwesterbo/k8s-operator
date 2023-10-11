@@ -14,7 +14,7 @@ Showing how to create kubernetes operators in Go
 
 ## Create a local cluster with kind:
 
-`kind creatr cluster --name testingk8soperator --config ./kind/kind-config.yaml`
+`kind create cluster --name testingk8soperator --config ./kind/kind-config.yaml`
 
 ### Testing getting nodes:
 
