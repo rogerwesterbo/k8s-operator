@@ -20,8 +20,6 @@ func main() {
 		panic(err)
 	}
 
-	println("Puh, did not die. Kubernetes config apprihended.")
-
 	k8sclient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		_, _ = fmt.Fprintln(os.Stderr, "error getting kubernetes client")
